@@ -1,0 +1,16 @@
+[
+{
+  "modid": "ingameime",
+  "name": "IngameIME",
+  "description": "Use InputMethod in full screen minecraft",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "https://github.com/Windmill-City/IngameIME-Minecraft",
+  "updateUrl": "",
+  "authorList": ["Windmill_City"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

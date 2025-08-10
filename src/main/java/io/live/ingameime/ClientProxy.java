@@ -1,0 +1,192 @@
+package io.live.ingameime;
+
+import io.live.ingameime.gui.OverlayScreen;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraftforge.client.event.GuiScreenEvent;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+
+import javax.annotation.Nonnull;
+
+import static io.live.ingameime.IngameIME_Forge.LOG;
+import static org.lwjgl.input.Keyboard.KEY_HOME;
+
+public class ClientProxy extends CommonProxy implements IMEventHandler {
+    public static ClientProxy INSTANCE = null;
+    public static OverlayScreen Screen = new OverlayScreen();
+    public static KeyBinding KeyBind = new KeyBinding("ingameime.key.desc", KEY_HOME, "IngameIME");
+    public static IMEventHandler IMEventHandler = IMStates.Disabled;
+    private static boolean IsKeyDown = false;
+    private static boolean lastFullscreenState = false;
+
+    @SubscribeEvent
+    public void onRenderScreen(GuiScreenEvent.DrawScreenEvent.Post event) {
+        // 确保Screen对象存在
+        if (Screen == null) {
+            Screen = new OverlayScreen();
+        }
+        
+        // 检查全屏状态变化
+        checkFullscreenStateChange();
+        
+        // 更新文本框跟踪（替代Mixin功能）
+        TextFieldTracker.updateTextFieldTracking();
+        
+        // 专门处理聊天界面
+        ChatGuiHandler.updateChatStatus();
+        
+        // 简单的IME测试
+        SimpleIMETest.updateIMEStatus();
+        
+        // 绘制覆盖层GUI
+        ClientProxy.Screen.draw();
+
+        // 处理快捷键
+        if (Keyboard.isKeyDown(ClientProxy.KeyBind.getKeyCode())) {
+            if (!IsKeyDown) {
+                IsKeyDown = true;
+                IngameIME_Forge.LOG.info("IME toggle key pressed");
+            }
+        } else if (IsKeyDown) {
+            IsKeyDown = false;
+            onToggleKey();
+        }
+
+        // 处理鼠标移动关闭功能
+        if (Config.TurnOffOnMouseMove.getBoolean())
+            if (IMEventHandler == IMStates.OpenedManual && (Mouse.getDX() > 0 || Mouse.getDY() > 0)) {
+                onMouseMove();
+            }
+    }
+
+    @SubscribeEvent
+    public void onRenderGameOverlay(RenderGameOverlayEvent.Post event) {
+        // 在游戏覆盖层渲染时也绘制IME GUI（用于全屏模式）
+        if (event.type == RenderGameOverlayEvent.ElementType.ALL) {
+            // 确保Screen对象存在
+            if (Screen == null) {
+                Screen = new OverlayScreen();
+            }
+            
+            // 也在游戏覆盖层中处理聊天界面
+            ChatGuiHandler.updateChatStatus();
+            
+            // 简单的IME测试
+            SimpleIMETest.updateIMEStatus();
+            
+            // 绘制覆盖层GUI
+            ClientProxy.Screen.draw();
+
+            // 处理快捷键（在没有GUI时）
+            if (net.minecraft.client.Minecraft.getMinecraft().currentScreen == null) {
+                if (Keyboard.isKeyDown(ClientProxy.KeyBind.getKeyCode())) {
+                    if (!IsKeyDown) {
+                        IsKeyDown = true;
+                        IngameIME_Forge.LOG.info("IME toggle key pressed (in-game)");
+                    }
+                } else if (IsKeyDown) {
+                    IsKeyDown = false;
+                    onToggleKey();
+                }
+            }
+        }
+    }
+
+    public void preInit(FMLPreInitializationEvent event) {
+        INSTANCE = this;
+        Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
+        ClientRegistry.registerKeyBinding(KeyBind);
+        Internal.loadLibrary();
+        Internal.createInputCtx();
+        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(new EventHandler()); // 注册简化的事件处理器
+        MinecraftForge.EVENT_BUS.register(new KeyboardInputHandler()); // 注册键盘输入处理器
+    }
+
+    @Override
+    public IMStates onScreenClose() {
+        IMEventHandler = IMEventHandler.onScreenClose();
+        return null;
+    }
+
+    @Override
+    public IMStates onControlFocus(@Nonnull Object control, boolean focused) {
+        IMEventHandler = IMEventHandler.onControlFocus(control, focused);
+        return null;
+    }
+
+    @Override
+    public IMStates onScreenOpen(Object screen) {
+        IMEventHandler = IMEventHandler.onScreenOpen(screen);
+        return null;
+    }
+
+    @Override
+    public IMStates onToggleKey() {
+        IMEventHandler = IMEventHandler.onToggleKey();
+        
+        // 添加测试内容显示
+        if (IMEventHandler == IMStates.OpenedManual) {
+            // 显示测试的预编辑内容
+            Screen.PreEdit.setContent("测试预编辑文本", 4);
+            // 显示测试的候选词
+            java.util.List<String> testCandidates = java.util.Arrays.asList("候选词1", "候选词2", "候选词3");
+            Screen.CandidateList.setContent(testCandidates, 0);
+            // 激活输入模式指示器
+            Screen.WInputMode.setActive(true);
+            Screen.WInputMode.setMode(ingameime.InputMode.Native);
+        }
+        
+        return null;
+    }
+
+    @Override
+    public IMStates onMouseMove() {
+        IMEventHandler = IMEventHandler.onMouseMove();
+        return null;
+    }
+    
+    /**
+     * 检查全屏状态变化，在状态切换时重置IME
+     */
+    private void checkFullscreenStateChange() {
+        try {
+            boolean currentFullscreenState = net.minecraft.client.Minecraft.getMinecraft().isFullScreen();
+            
+            if (currentFullscreenState != lastFullscreenState) {
+                LOG.info("Fullscreen state changed: {} -> {}", lastFullscreenState, currentFullscreenState);
+                lastFullscreenState = currentFullscreenState;
+                
+                // 全屏状态变化时，安全地重置IME状态
+                if (Internal.getActivated()) {
+                    LOG.info("Resetting IME state due to fullscreen change");
+                    try {
+                        // 先安全地去激活IME
+                        Internal.setActivated(false);
+                        
+                        // 清除任何预编辑内容
+                        if (Screen != null) {
+                            Screen.PreEdit.setContent(null, -1);
+                            Screen.CandidateList.setContent(null, -1);
+                            Screen.WInputMode.setActive(false);
+                        }
+                        
+                        // 短暂延迟后重新创建InputContext以确保稳定性
+                        Thread.sleep(50);
+                        Internal.createInputCtx();
+                        
+                    } catch (Exception e) {
+                        LOG.error("Failed to reset IME state during fullscreen change", e);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.debug("Failed to check fullscreen state change", e);
+        }
+    }
+}
