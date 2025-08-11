@@ -34,7 +34,13 @@ public class ChatGuiHandler {
     
     private static void onChatOpened() {
         if (ClientProxy.INSTANCE != null) {
-            // 模拟文本框获得焦点
+            // 预检查：确保InputContext存在且可用，但避免不必要的重建
+            if (Internal.InputCtx == null || !Internal.getActivated()) {
+                IngameIME_Forge.LOG.debug("InputContext needs initialization for chat");
+                // 不在这里强制创建，让onControlFocus处理
+            }
+            
+            // 模拟文本框获得焦点，立即激活IME
             ClientProxy.INSTANCE.onControlFocus("ChatTextField", true);
         }
     }

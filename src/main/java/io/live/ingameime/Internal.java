@@ -20,6 +20,10 @@ public class Internal {
     public static boolean LIBRARY_LOADED = false;
     public static InputContext InputCtx = null;
     
+    // 缓存窗口句柄和相关状态以避免频繁查询
+    private static long cachedWindowHandle = 0;
+    private static boolean lastFullscreenState = false;
+    
     // Native library callback objects
     static PreEditCallbackImpl preEditCallbackProxy = null;
     static CommitCallbackImpl commitCallbackProxy = null;
@@ -62,33 +66,110 @@ public class Internal {
 
     public static void destroyInputCtx() {
         if (InputCtx != null) {
-            InputCtx = null;
-            LOG.info("InputContext has destroyed!");
+            try {
+                // 首先尝试安全地去激活IME
+                if (InputCtx.getActivated()) {
+                    InputCtx.setActivated(false);
+                    LOG.debug("IME deactivated before destroying InputContext");
+                }
+                
+                // 调用delete方法释放native资源（如1.7.10版本）
+                InputCtx.delete();
+                LOG.info("InputContext native resources released");
+            } catch (Exception e) {
+                LOG.warn("Failed to properly destroy InputContext: {}", e.getMessage());
+            } finally {
+                // 无论如何都要清空引用
+                InputCtx = null;
+                LOG.info("InputContext reference cleared");
+            }
         }
     }
 
     public static void createInputCtx() {
         if (!LIBRARY_LOADED) {
-            LOG.info("Library not loaded, skipping InputContext creation");
+            LOG.debug("Library not loaded, skipping InputContext creation");
             return;
         }
+        
+        // 如果InputContext已经存在且有效，不重复创建
+        if (InputCtx != null) {
+            try {
+                InputCtx.getActivated(); // 快速验证有效性
+                LOG.debug("InputContext already exists and is valid, skipping recreation");
+                return;
+            } catch (Exception e) {
+                LOG.debug("Existing InputContext is invalid, will recreate", e);
+                InputCtx = null;
+            }
+        }
 
-        LOG.info("Using IngameIME-Native: {}", InputContext.getVersion());
+        LOG.debug("Creating new InputContext");
 
-        long hWnd = getWindowHandle_LWJGL2();
-        if (hWnd != 0) {
-            // Once switched to the full screen, we can't back to not UiLess mode, unless restart the game
-            if (Minecraft.getMinecraft().isFullScreen()) Config.UiLess_Windows.set(true);
+        // 检查全屏状态是否发生变化，如果是则清除缓存
+        boolean currentFullscreen = Minecraft.getMinecraft().isFullScreen();
+        if (currentFullscreen != lastFullscreenState) {
+            LOG.debug("Fullscreen state changed, clearing window handle cache");
+            cachedWindowHandle = 0;
+            lastFullscreenState = currentFullscreen;
+        }
+
+        // 使用缓存的窗口句柄或获取新的
+        long hWnd = cachedWindowHandle;
+        if (hWnd == 0) {
+            hWnd = getWindowHandle_LWJGL2();
+            if (hWnd != 0) {
+                cachedWindowHandle = hWnd;
+                LOG.debug("Cached new window handle: 0x{}", Long.toHexString(hWnd));
+            }
+        }
+        
+        if (hWnd == 0) {
+            LOG.error("Cannot create InputContext: window handle is NULL");
+            return;
+        }
+        
+        try {
+            // 确保在全屏模式下使用正确的设置
+            boolean isFullscreen = Minecraft.getMinecraft().isFullScreen();
+            if (isFullscreen) {
+                Config.UiLess_Windows.set(true);
+            }
+            
             API api = Config.API_Windows.getString().equals("TextServiceFramework") ? API.TextServiceFramework : API.Imm32;
-            LOG.info("Using API: {}, UiLess: {}", api, Config.UiLess_Windows.getBoolean());
+            LOG.debug("Creating InputContext - API: {}, UiLess: {}, Fullscreen: {}, hWnd: 0x{}", 
+                     api, Config.UiLess_Windows.getBoolean(), isFullscreen, Long.toHexString(hWnd));
+            
             InputCtx = IngameIME.CreateInputContextWin32(hWnd, api, Config.UiLess_Windows.getBoolean());
-            LOG.info("InputContext has created!");
-        } else {
-            LOG.error("InputContext could not init as the hWnd is NULL!");
-            return;
+            
+            if (InputCtx != null) {
+                LOG.info("InputContext created successfully");
+                setupCallbacks();
+                
+                // 验证创建的InputContext是否立即可用
+                try {
+                    InputCtx.getActivated(); // 快速验证
+                    LOG.debug("Newly created InputContext validated successfully");
+                } catch (Exception validationE) {
+                    LOG.warn("Newly created InputContext failed validation, destroying: {}", validationE.getMessage());
+                    destroyInputCtx();
+                    return;
+                }
+            } else {
+                LOG.error("Failed to create InputContext: returned null");
+            }
+            
+        } catch (Exception e) {
+            LOG.error("Exception during InputContext creation: {}", e.getMessage());
+            if (InputCtx != null) {
+                try {
+                    InputCtx.delete();
+                } catch (Exception cleanupE) {
+                    LOG.debug("Failed to cleanup invalid InputContext", cleanupE);
+                }
+                InputCtx = null;
+            }
         }
-
-        setupCallbacks();
     }
     
     private static void setupCallbacks() {
@@ -299,35 +380,96 @@ public class Internal {
 
     public static void setActivated(boolean activated) {
         if (InputCtx == null) {
-            LOG.warn("Cannot set IME activation state: InputContext is null");
-            return;
+            LOG.debug("Cannot set IME activation state: InputContext is null, creating new one");
+            createInputCtx();
+            if (InputCtx == null) {
+                LOG.warn("Failed to create InputContext, skipping activation");
+                return;
+            }
         }
         
         try {
-            boolean currentState = InputCtx.getActivated();
-            if (currentState != activated) {
-                // 在全屏模式下，避免频繁切换状态
-                if (Minecraft.getMinecraft().isFullScreen() && !activated) {
-                    LOG.debug("Skipping IME deactivation in fullscreen mode");
+            // 先验证InputContext是否有效
+            if (!isInputContextValid()) {
+                LOG.debug("InputContext is invalid, recreating before activation");
+                recreateInputContext();
+                if (InputCtx == null) {
+                    LOG.warn("Failed to recreate InputContext, skipping activation");
                     return;
                 }
-                
+            }
+            
+            boolean currentState = InputCtx.getActivated();
+            if (currentState != activated) {
                 InputCtx.setActivated(activated);
-                LOG.info("IM active state: {}", activated);
+                LOG.debug("IM active state changed to: {}", activated);
                 
                 if (activated) {
                     // 设置预编辑矩形位置，告诉输入法候选词显示位置
                     updatePreEditRect();
+                } else {
+                    // 去激活时清除所有预编辑状态
+                    clearAllPreEditState();
                 }
+            } else {
+                LOG.debug("IM activation state unchanged: {}", activated);
             }
         } catch (Exception e) {
-            LOG.error("Failed to set IME activation state to {}: {}", activated, e.getMessage());
+            LOG.warn("Failed to set IME activation state to {}: {}", activated, e.getMessage());
             
-            // 如果设置失败，尝试重新创建InputContext
+            // 对于参数错误，立即重建InputContext并重试一次
             if (e.getMessage() != null && e.getMessage().contains("0x80070057")) {
-                LOG.warn("Parameter error detected, attempting to recreate InputContext");
-                recreateInputContext();
+                LOG.info("COM parameter error detected, performing immediate InputContext rebuild");
+                try {
+                    recreateInputContext();
+                    if (InputCtx != null && activated) {
+                        // 重试激活（仅针对激活操作，去激活失败可以忽略）
+                        InputCtx.setActivated(activated);
+                        LOG.info("IME activation retry succeeded after rebuild");
+                        if (activated) {
+                            updatePreEditRect();
+                        }
+                    }
+                } catch (Exception retryE) {
+                    LOG.error("IME activation retry failed even after rebuild: {}", retryE.getMessage());
+                }
             }
+        }
+    }
+    
+    /**
+     * 检查InputContext是否有效
+     */
+    private static boolean isInputContextValid() {
+        if (InputCtx == null) return false;
+        try {
+            // 尝试调用一个轻量级操作来测试有效性
+            InputCtx.getActivated();
+            return true;
+        } catch (Exception e) {
+            LOG.debug("InputContext validity check failed: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 清除所有预编辑状态
+     */
+    private static void clearAllPreEditState() {
+        try {
+            if (ClientProxy.Screen != null) {
+                ClientProxy.Screen.PreEdit.setContent(null, -1);
+                ClientProxy.Screen.CandidateList.setContent(null, -1);
+                ClientProxy.Screen.WInputMode.setActive(false);
+            }
+            
+            // 清除内部预编辑状态
+            currentPreEditText = "";
+            preEditStartPos = -1;
+            
+            LOG.debug("All pre-edit state cleared");
+        } catch (Exception e) {
+            LOG.debug("Failed to clear pre-edit state", e);
         }
     }
     
@@ -335,7 +477,6 @@ public class Internal {
         try {
             LOG.info("Recreating InputContext due to parameter error");
             destroyInputCtx();
-            Thread.sleep(100); // 短暂等待
             createInputCtx();
         } catch (Exception e) {
             LOG.error("Failed to recreate InputContext", e);

@@ -103,6 +103,7 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler()); // 注册简化的事件处理器
         MinecraftForge.EVENT_BUS.register(new KeyboardInputHandler()); // 注册键盘输入处理器
+        MinecraftForge.EVENT_BUS.register(new FullscreenToggleHandler()); // 注册全屏切换安全处理器
     }
 
     @Override
@@ -137,6 +138,7 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
     
     /**
      * 检查全屏状态变化，在状态切换时重置IME
+     * 简化版本，模拟1.7.10版本的快速处理
      */
     private void checkFullscreenStateChange() {
         try {
@@ -146,27 +148,10 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
                 LOG.info("Fullscreen state changed: {} -> {}", lastFullscreenState, currentFullscreenState);
                 lastFullscreenState = currentFullscreenState;
                 
-                // 全屏状态变化时，安全地重置IME状态
-                if (Internal.getActivated()) {
-                    LOG.info("Resetting IME state due to fullscreen change");
-                    try {
-                        // 先安全地去激活IME
-                        Internal.setActivated(false);
-                        
-                        // 清除任何预编辑内容
-                        if (Screen != null) {
-                            Screen.PreEdit.setContent(null, -1);
-                            Screen.CandidateList.setContent(null, -1);
-                            Screen.WInputMode.setActive(false);
-                        }
-                        
-                        // 短暂延迟后重新创建InputContext以确保稳定性
-                        Thread.sleep(50);
-                        Internal.createInputCtx();
-                        
-                    } catch (Exception e) {
-                        LOG.error("Failed to reset IME state during fullscreen change", e);
-                    }
+                // 模拟1.7.10版本的快速处理：只有在需要时才重建InputContext
+                if (Internal.InputCtx == null) {
+                    LOG.info("InputContext is null, creating new one after fullscreen change");
+                    Internal.createInputCtx();
                 }
             }
         } catch (Exception e) {

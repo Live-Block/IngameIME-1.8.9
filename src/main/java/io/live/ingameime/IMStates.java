@@ -9,18 +9,27 @@ public enum IMStates implements IMEventHandler {
         public IMStates onControlFocus(@Nonnull Object control, boolean focused) {
             if (focused) {
                 ActiveControl = control;
-                IngameIME_Forge.LOG.info("Opened by control focus: {}", ActiveControl.getClass().getSimpleName());
-                Internal.setActivated(true);
+                IngameIME_Forge.LOG.debug("Control focus gained: {}", ActiveControl.getClass().getSimpleName());
                 
-                // 清除之前的内容，准备新的输入
-                if (ClientProxy.Screen != null) {
-                    ClientProxy.Screen.PreEdit.setContent(null, -1);
-                    ClientProxy.Screen.CandidateList.setContent(null, -1);
-                    ClientProxy.Screen.WInputMode.setActive(true);
-                    ClientProxy.Screen.WInputMode.setMode(ingameime.InputMode.AlphaNumeric);
+                // 尝试激活IME，如果失败不要改变状态
+                try {
+                    Internal.setActivated(true);
+                    IngameIME_Forge.LOG.info("IME activated for control: {}", ActiveControl.getClass().getSimpleName());
+                    
+                    // 清除之前的内容，准备新的输入
+                    if (ClientProxy.Screen != null) {
+                        ClientProxy.Screen.PreEdit.setContent(null, -1);
+                        ClientProxy.Screen.CandidateList.setContent(null, -1);
+                        ClientProxy.Screen.WInputMode.setActive(true);
+                        ClientProxy.Screen.WInputMode.setMode(ingameime.InputMode.AlphaNumeric);
+                    }
+                    
+                    return OpenedAuto;
+                } catch (Exception e) {
+                    IngameIME_Forge.LOG.warn("Failed to activate IME for control focus: {}", e.getMessage());
+                    // 激活失败，保持Disabled状态
+                    return this;
                 }
-                
-                return OpenedAuto;
             } else {
                 return this;
             }
@@ -28,9 +37,15 @@ public enum IMStates implements IMEventHandler {
 
         @Override
         public IMStates onToggleKey() {
-            IngameIME_Forge.LOG.info("Turned on by toggle key");
-            Internal.setActivated(true);
-            return OpenedManual;
+            IngameIME_Forge.LOG.info("Toggle key pressed, attempting to activate IME");
+            try {
+                Internal.setActivated(true);
+                IngameIME_Forge.LOG.info("IME activated by toggle key");
+                return OpenedManual;
+            } catch (Exception e) {
+                IngameIME_Forge.LOG.warn("Failed to activate IME by toggle key: {}", e.getMessage());
+                return this; // 保持Disabled状态
+            }
         }
 
     }, OpenedManual {
