@@ -21,21 +21,7 @@ public class OverlayScreen extends Widget {
 
     @Override
     public void draw() {
-        // 添加调试信息
         boolean active = isActive();
-        
-        // 显示状态指示器
-        if (Internal.InputCtx != null) {
-            if (active) {
-                drawRect(10, 10, 70, 25, 0x8000FF00); // 半透明绿色
-                net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(
-                    "IME: ON", 12, 12, 0xFFFFFFFF);
-            } else {
-                drawRect(10, 10, 70, 25, 0x80FF0000); // 半透明红色
-                net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(
-                    "IME: OFF", 12, 12, 0xFFFFFFFF);
-            }
-        }
         
         if (!active) {
             return;

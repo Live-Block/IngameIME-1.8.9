@@ -14,8 +14,6 @@ public class WidgetInputMode extends Widget {
     public WidgetInputMode() {
         Padding = 5;
         DrawInline = false;
-        // 为测试目的，初始设置为活跃状态
-        setActive(true);
     }
 
     @Override

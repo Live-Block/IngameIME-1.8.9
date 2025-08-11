@@ -10,9 +10,6 @@ public class WidgetCandidateList extends Widget {
 
     WidgetCandidateList() {
         Padding = 3;
-        // 为测试目的，添加一些候选词
-        // java.util.Arrays.asList("候选词1", "候选词2", "候选词3");
-        // setContent(testCandidates, 0);
     }
 
     public void setContent(List<String> candidates, int selected) {

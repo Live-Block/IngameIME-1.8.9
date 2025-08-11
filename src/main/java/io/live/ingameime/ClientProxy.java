@@ -40,9 +40,6 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
         // 专门处理聊天界面
         ChatGuiHandler.updateChatStatus();
         
-        // 简单的IME测试
-        SimpleIMETest.updateIMEStatus();
-        
         // 绘制覆盖层GUI
         ClientProxy.Screen.draw();
 
@@ -75,9 +72,6 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
             
             // 也在游戏覆盖层中处理聊天界面
             ChatGuiHandler.updateChatStatus();
-            
-            // 简单的IME测试
-            SimpleIMETest.updateIMEStatus();
             
             // 绘制覆盖层GUI
             ClientProxy.Screen.draw();
@@ -129,19 +123,6 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
     @Override
     public IMStates onToggleKey() {
         IMEventHandler = IMEventHandler.onToggleKey();
-        
-        // 添加测试内容显示
-        if (IMEventHandler == IMStates.OpenedManual) {
-            // 显示测试的预编辑内容
-            Screen.PreEdit.setContent("测试预编辑文本", 4);
-            // 显示测试的候选词
-            java.util.List<String> testCandidates = java.util.Arrays.asList("候选词1", "候选词2", "候选词3");
-            Screen.CandidateList.setContent(testCandidates, 0);
-            // 激活输入模式指示器
-            Screen.WInputMode.setActive(true);
-            Screen.WInputMode.setMode(ingameime.InputMode.Native);
-        }
-        
         return null;
     }
 

@@ -11,8 +11,6 @@ public class WidgetPreEdit extends Widget {
     private int Cursor = -1;
     
     public WidgetPreEdit() {
-        // 为测试目的，设置一些默认内容
-        // setContent("测试预编辑", 2);
     }
 
     public void setContent(String content, int cursor) {
