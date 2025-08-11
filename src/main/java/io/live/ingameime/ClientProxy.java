@@ -57,11 +57,7 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
             }
     }
 
-    @SubscribeEvent
-    public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
-        // 在GUI初始化时更新文本框跟踪
-        TextFieldTracker.updateTextFieldTracking();
-    }
+
 
     @SubscribeEvent
     public void onRenderGameOverlay(RenderGameOverlayEvent.Post event) {
@@ -105,7 +101,7 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
         Internal.createInputCtx();
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler()); // 注册简化的事件处理器
-        MinecraftForge.EVENT_BUS.register(new KeyboardInputHandler()); // 注册键盘输入处理器
+        // KeyboardInputHandler removed - 1.7.10 uses pure Mixin approach via MixinGuiScreen.callKeyTyped
         // FullscreenToggleHandler 已被MixinMinecraft替代，不再需要注册
         
         LOG.info("IngameIME ClientProxy 初始化完成 - Mixin模式");

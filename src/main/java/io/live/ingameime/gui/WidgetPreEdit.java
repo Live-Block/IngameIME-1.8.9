@@ -23,21 +23,28 @@ public class WidgetPreEdit extends Widget {
     @Override
     public void layout() {
         if (!isDirty) return;
-        
-        // PreEdit不再显示内容，所以大小设为0
-        Width = Height = 0;
+        if (isActive()) {
+            Width = net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.getStringWidth(Content) + CursorWidth;
+            Height = net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT;
+        } else {
+            Width = Height = 0;
+        }
         super.layout();
 
-        // 候选词列表位置现在由OverlayScreen.setCaretPos直接设置
-        // 不需要在这里设置
+        WidgetCandidateList list = ClientProxy.Screen.CandidateList;
+        list.setPos(X, Y + Height);
+        // Check if overlap
+        if (list.Y < Y + Height) {
+            list.setPos(X, Y - list.Height);
+        }
         
-        // Update Rect - 保持这个逻辑以便输入法引擎知道输入位置
+        // Update Rect
         if (!Internal.LIBRARY_LOADED || Internal.InputCtx == null) return;
         PreEditRect rect = new PreEditRect();
         rect.setX(X);
         rect.setY(Y);
-        rect.setHeight(20); // 固定高度
-        rect.setWidth(200); // 固定宽度
+        rect.setHeight(Height);
+        rect.setWidth(Width);
         Internal.InputCtx.setPreEditRect(rect);
     }
 
@@ -48,8 +55,13 @@ public class WidgetPreEdit extends Widget {
 
     @Override
     public void draw() {
-        // 不再在覆盖层显示拼音内容，拼音直接显示在游戏输入框中
-        // PreEdit widget现在只用于位置计算，不显示实际内容
-        return;
+        if (!isActive()) return;
+        super.draw();
+        String beforeCursor = Content.substring(0, Cursor);
+        String afterCursor = Content.substring(Cursor);
+        int x = net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(beforeCursor, X + Padding, Y + Padding, TextColor);
+        // Cursor
+        drawRect(x + 1, Y + Padding, x + 2, Y + Padding + Height, TextColor);
+        net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(afterCursor, x + CursorWidth, Y + Padding, TextColor);
     }
 }

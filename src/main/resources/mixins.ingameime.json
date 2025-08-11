@@ -1,12 +1,14 @@
 {
-  "required": true,
-  "minVersion": "0.7.11",
+  "required": false,
+  "minVersion": "0.8",
   "package": "io.live.ingameime.mixins",
   "compatibilityLevel": "JAVA_8",
   "refmap": "mixins.ingameime.refmap.json",
   "mixins": [
   ],
   "client": [
+    "MixinGuiScreen",
+    "MixinGuiTextField", 
     "MixinMinecraft"
   ],
   "injectors": {
