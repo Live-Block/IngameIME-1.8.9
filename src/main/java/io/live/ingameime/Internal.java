@@ -20,9 +20,7 @@ public class Internal {
     public static boolean LIBRARY_LOADED = false;
     public static InputContext InputCtx = null;
     
-    // 缓存窗口句柄和相关状态以避免频繁查询
-    private static long cachedWindowHandle = 0;
-    private static boolean lastFullscreenState = false;
+    // 窗口句柄缓存 - 简化版本，Mixin确保正确时机重建InputContext
     
     // Native library callback objects
     static PreEditCallbackImpl preEditCallbackProxy = null;
@@ -106,22 +104,10 @@ public class Internal {
 
         LOG.debug("Creating new InputContext");
 
-        // 检查全屏状态是否发生变化，如果是则清除缓存
-        boolean currentFullscreen = Minecraft.getMinecraft().isFullScreen();
-        if (currentFullscreen != lastFullscreenState) {
-            LOG.debug("Fullscreen state changed, clearing window handle cache");
-            cachedWindowHandle = 0;
-            lastFullscreenState = currentFullscreen;
-        }
-
-        // 使用缓存的窗口句柄或获取新的
-        long hWnd = cachedWindowHandle;
-        if (hWnd == 0) {
-            hWnd = getWindowHandle_LWJGL2();
-            if (hWnd != 0) {
-                cachedWindowHandle = hWnd;
-                LOG.debug("Cached new window handle: 0x{}", Long.toHexString(hWnd));
-            }
+        // 直接获取当前窗口句柄 - Mixin确保在正确时机调用
+        long hWnd = getWindowHandle_LWJGL2();
+        if (hWnd != 0) {
+            LOG.debug("Got window handle: 0x{}", Long.toHexString(hWnd));
         }
         
         if (hWnd == 0) {

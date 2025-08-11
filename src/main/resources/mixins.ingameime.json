@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.7.11",
+  "package": "io.live.ingameime.mixins",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "mixins.ingameime.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "MixinMinecraft"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

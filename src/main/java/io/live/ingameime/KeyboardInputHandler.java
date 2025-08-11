@@ -18,35 +18,9 @@ public class KeyboardInputHandler {
         char typedChar = Keyboard.getEventCharacter();
         int keyCode = Keyboard.getEventKey();
         
-        // 特别处理F11键 - 全屏切换时预先处理IME状态
+        // F11处理完全交给MixinMinecraft，这里不做任何处理
         if (keyCode == Keyboard.KEY_F11) {
-            IngameIME_Forge.LOG.debug("F11 key pressed, IME activated: {}", Internal.getActivated());
-            
-            // 如果IME激活，在全屏切换前立即安全地去激活
-            if (Internal.getActivated()) {
-                IngameIME_Forge.LOG.info("F11 pressed with active IME, pre-emptively deactivating to prevent crash");
-                try {
-                    // 清除所有IME状态
-                    if (ClientProxy.Screen != null) {
-                        ClientProxy.Screen.PreEdit.setContent(null, -1);
-                        ClientProxy.Screen.CandidateList.setContent(null, -1);
-                        ClientProxy.Screen.WInputMode.setActive(false);
-                    }
-                    
-                    // 安全地去激活IME
-                    Internal.setActivated(false);
-                    
-                    // 重置IME事件处理器状态
-                    ClientProxy.IMEventHandler = IMStates.Disabled;
-                    
-                    IngameIME_Forge.LOG.info("IME safely deactivated before F11 fullscreen toggle");
-                } catch (Exception e) {
-                    IngameIME_Forge.LOG.error("Failed to safely deactivate IME before F11 toggle", e);
-                }
-            }
-            
-            // 不拦截F11事件，让正常的全屏切换继续
-            return;
+            return; // 让MixinMinecraft处理F11
         }
         
         // 特别处理ESC键 - 确保不干扰正常的ESC行为

@@ -22,7 +22,7 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
     public static KeyBinding KeyBind = new KeyBinding("ingameime.key.desc", KEY_HOME, "IngameIME");
     public static IMEventHandler IMEventHandler = IMStates.Disabled;
     private static boolean IsKeyDown = false;
-    private static boolean lastFullscreenState = false;
+    // lastFullscreenState 已移除 - Mixin处理全屏切换，无需轮询检查
 
     @SubscribeEvent
     public void onRenderScreen(GuiScreenEvent.DrawScreenEvent.Post event) {
@@ -31,8 +31,7 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
             Screen = new OverlayScreen();
         }
         
-        // 检查全屏状态变化
-        checkFullscreenStateChange();
+        // 全屏状态变化检查已移除 - 由MixinMinecraft处理
         
         // 专门处理聊天界面
         ChatGuiHandler.updateChatStatus();
@@ -95,7 +94,11 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
     }
 
     public void preInit(FMLPreInitializationEvent event) {
+        LOG.info("IngameIME ClientProxy 开始初始化 (with Mixin support)");
+        
+        // 设置静态实例引用，供Mixin使用
         INSTANCE = this;
+        
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
         ClientRegistry.registerKeyBinding(KeyBind);
         Internal.loadLibrary();
@@ -103,7 +106,9 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandler()); // 注册简化的事件处理器
         MinecraftForge.EVENT_BUS.register(new KeyboardInputHandler()); // 注册键盘输入处理器
-        MinecraftForge.EVENT_BUS.register(new FullscreenToggleHandler()); // 注册全屏切换安全处理器
+        // FullscreenToggleHandler 已被MixinMinecraft替代，不再需要注册
+        
+        LOG.info("IngameIME ClientProxy 初始化完成 - Mixin模式");
     }
 
     @Override
@@ -136,26 +141,5 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
         return null;
     }
     
-    /**
-     * 检查全屏状态变化，在状态切换时重置IME
-     * 简化版本，模拟1.7.10版本的快速处理
-     */
-    private void checkFullscreenStateChange() {
-        try {
-            boolean currentFullscreenState = net.minecraft.client.Minecraft.getMinecraft().isFullScreen();
-            
-            if (currentFullscreenState != lastFullscreenState) {
-                LOG.info("Fullscreen state changed: {} -> {}", lastFullscreenState, currentFullscreenState);
-                lastFullscreenState = currentFullscreenState;
-                
-                // 模拟1.7.10版本的快速处理：只有在需要时才重建InputContext
-                if (Internal.InputCtx == null) {
-                    LOG.info("InputContext is null, creating new one after fullscreen change");
-                    Internal.createInputCtx();
-                }
-            }
-        } catch (Exception e) {
-            LOG.debug("Failed to check fullscreen state change", e);
-        }
-    }
+    // checkFullscreenStateChange方法已完全移除 - 由MixinMinecraft处理
 }
