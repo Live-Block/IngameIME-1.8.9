@@ -2,6 +2,7 @@ package io.live.ingameime.gui;
 
 import io.live.ingameime.Internal;
 import ingameime.InputContext;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.opengl.GL11;
 
 public class OverlayScreen extends Widget {
@@ -36,11 +37,14 @@ public class OverlayScreen extends Widget {
 
     public void setCaretPos(int x, int y) {
         PreEdit.setPos(x, y);
-        WInputMode.setPos(x, y);
         
-        // 直接设置候选词列表位置，因为PreEdit不再显示内容
-        // 候选词应该显示在输入框上方
-        CandidateList.setPos(x, y - 25); // 在输入位置上方25像素显示候选词
+        // WInputMode ("Native"框) 需要更贴近输入栏
+        // 因为它的DrawInline=false，会自动向下偏移字体高度，所以我们需要向上调整
+        int inputModeY = y - Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT;
+        WInputMode.setPos(x, inputModeY);
+        
+        // 候选词列表精确定位到聊天输入框的左正上方
+        CandidateList.setPos(x, y);
     }
     
     public int getCaretX() {
