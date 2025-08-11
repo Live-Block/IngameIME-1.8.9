@@ -293,16 +293,36 @@ public class Internal {
             net.minecraft.client.gui.GuiTextField inputField = (net.minecraft.client.gui.GuiTextField) inputFieldField.get(chatGui);
             
             if (inputField != null) {
-                // 获取当前文本和光标位置
+                // 获取当前文本、光标位置和选中范围
                 String currentText = inputField.getText();
                 int cursorPos = getCursorPosition(inputField);
+                int selectionStart = getSelectionStart(inputField);
+                int selectionEnd = getSelectionEnd(inputField);
                 
-                // 在光标位置插入文本
-                String newText = currentText.substring(0, cursorPos) + text + currentText.substring(cursorPos);
+                String newText;
+                int newCursorPos;
+                
+                // 检查是否有选中的文本（如Ctrl+A全选）
+                if (selectionStart != selectionEnd) {
+                    // 有选中文本，替换选中的部分
+                    int startPos = Math.min(selectionStart, selectionEnd);
+                    int endPos = Math.max(selectionStart, selectionEnd);
+                    
+                    newText = currentText.substring(0, startPos) + text + currentText.substring(endPos);
+                    newCursorPos = startPos + text.length();
+                    
+                    LOG.info("Replacing selected text ({}:{}) with '{}'", startPos, endPos, text);
+                } else {
+                    // 没有选中文本，在光标位置插入
+                    newText = currentText.substring(0, cursorPos) + text + currentText.substring(cursorPos);
+                    newCursorPos = cursorPos + text.length();
+                    
+                    LOG.debug("Inserting text '{}' at cursor position {}", text, cursorPos);
+                }
+                
                 inputField.setText(newText);
-                
-                // 更新光标位置
-                setCursorPosition(inputField, cursorPos + text.length());
+                setCursorPosition(inputField, newCursorPos);
+                clearSelection(inputField); // 清除选中状态
                 
                 LOG.info("Successfully input text '{}' to chat field", text);
             } else {
@@ -319,12 +339,36 @@ public class Internal {
             // 尝试找到当前聚焦的文本框
             net.minecraft.client.gui.GuiTextField focusedField = TextFieldTracker.getFocusedTextField();
             if (focusedField != null) {
+                // 获取当前文本、光标位置和选中范围
                 String currentText = focusedField.getText();
                 int cursorPos = getCursorPosition(focusedField);
+                int selectionStart = getSelectionStart(focusedField);
+                int selectionEnd = getSelectionEnd(focusedField);
                 
-                String newText = currentText.substring(0, cursorPos) + text + currentText.substring(cursorPos);
+                String newText;
+                int newCursorPos;
+                
+                // 检查是否有选中的文本（如Ctrl+A全选）
+                if (selectionStart != selectionEnd) {
+                    // 有选中文本，替换选中的部分
+                    int startPos = Math.min(selectionStart, selectionEnd);
+                    int endPos = Math.max(selectionStart, selectionEnd);
+                    
+                    newText = currentText.substring(0, startPos) + text + currentText.substring(endPos);
+                    newCursorPos = startPos + text.length();
+                    
+                    LOG.info("Replacing selected text ({}:{}) with '{}' in generic field", startPos, endPos, text);
+                } else {
+                    // 没有选中文本，在光标位置插入
+                    newText = currentText.substring(0, cursorPos) + text + currentText.substring(cursorPos);
+                    newCursorPos = cursorPos + text.length();
+                    
+                    LOG.debug("Inserting text '{}' at cursor position {} in generic field", text, cursorPos);
+                }
+                
                 focusedField.setText(newText);
-                setCursorPosition(focusedField, cursorPos + text.length());
+                setCursorPosition(focusedField, newCursorPos);
+                clearSelection(focusedField); // 清除选中状态
                 
                 LOG.info("Successfully input text '{}' to text field", text);
             } else {
@@ -353,6 +397,47 @@ public class Internal {
             setCursorPosMethod.invoke(textField, position);
         } catch (Exception e) {
             LOG.debug("Failed to set cursor position", e);
+        }
+    }
+    
+    /**
+     * 获取文本选中的起始位置
+     */
+    private static int getSelectionStart(net.minecraft.client.gui.GuiTextField textField) {
+        try {
+            java.lang.reflect.Field selectionEndField = net.minecraft.client.gui.GuiTextField.class.getDeclaredField("field_146224_r"); // selectionEnd
+            selectionEndField.setAccessible(true);
+            return selectionEndField.getInt(textField);
+        } catch (Exception e) {
+            LOG.debug("Failed to get selection start, using cursor position", e);
+            return getCursorPosition(textField);
+        }
+    }
+    
+    /**
+     * 获取文本选中的结束位置
+     */
+    private static int getSelectionEnd(net.minecraft.client.gui.GuiTextField textField) {
+        try {
+            // 在Minecraft 1.8.9中，光标位置就是选中的结束位置
+            return getCursorPosition(textField);
+        } catch (Exception e) {
+            LOG.debug("Failed to get selection end", e);
+            return getCursorPosition(textField);
+        }
+    }
+    
+    /**
+     * 清除文本选中状态
+     */
+    private static void clearSelection(net.minecraft.client.gui.GuiTextField textField) {
+        try {
+            // 将选中起始位置设置为当前光标位置，这样就没有选中了
+            java.lang.reflect.Field selectionEndField = net.minecraft.client.gui.GuiTextField.class.getDeclaredField("field_146224_r"); // selectionEnd
+            selectionEndField.setAccessible(true);
+            selectionEndField.setInt(textField, getCursorPosition(textField));
+        } catch (Exception e) {
+            LOG.debug("Failed to clear selection", e);
         }
     }
 
@@ -466,6 +551,7 @@ public class Internal {
             // 清除内部预编辑状态
             currentPreEditText = "";
             preEditStartPos = -1;
+            preEditEndPos = -1;
             
             LOG.debug("All pre-edit state cleared");
         } catch (Exception e) {
@@ -516,6 +602,7 @@ public class Internal {
     // 存储当前预编辑状态
     private static String currentPreEditText = "";
     private static int preEditStartPos = -1;
+    private static int preEditEndPos = -1; // 存储选中文本的结束位置
     
     /**
      * 将拼音输入到游戏输入框中
@@ -561,6 +648,7 @@ public class Internal {
             // 重置预编辑状态
             currentPreEditText = "";
             preEditStartPos = -1;
+            preEditEndPos = -1;
             
         } catch (Exception e) {
             LOG.error("Failed to clear PreEdit from game field", e);
@@ -583,9 +671,23 @@ public class Internal {
                 String currentText = inputField.getText();
                 int cursorPos = getCursorPosition(inputField);
                 
-                // 如果是第一次输入拼音，记录起始位置
+                // 如果是第一次输入拼音，记录起始和结束位置
                 if (currentPreEditText.isEmpty()) {
-                    preEditStartPos = cursorPos;
+                    int selectionStart = getSelectionStart(inputField);
+                    int selectionEnd = getSelectionEnd(inputField);
+                    
+                    // 检查是否有选中的文本
+                    if (selectionStart != selectionEnd) {
+                        // 有选中文本，记录选中范围
+                        preEditStartPos = Math.min(selectionStart, selectionEnd);
+                        preEditEndPos = Math.max(selectionStart, selectionEnd);
+                        LOG.info("Starting PreEdit with selected text ({}:{})", preEditStartPos, preEditEndPos);
+                    } else {
+                        // 没有选中文本，只记录光标位置
+                        preEditStartPos = cursorPos;
+                        preEditEndPos = cursorPos;
+                        LOG.debug("Starting PreEdit at cursor position {}", preEditStartPos);
+                    }
                 }
                 
                 // 计算新的文本内容
@@ -599,7 +701,10 @@ public class Internal {
                         afterPreEdit = currentText.substring(afterPreEditStart);
                     }
                 } else {
-                    afterPreEdit = currentText.substring(cursorPos);
+                    // 第一次输入预编辑文本，需要移除选中的文本（如果有的话）
+                    if (preEditEndPos < currentText.length()) {
+                        afterPreEdit = currentText.substring(preEditEndPos);
+                    }
                 }
                 
                 // 插入新的预编辑文本
