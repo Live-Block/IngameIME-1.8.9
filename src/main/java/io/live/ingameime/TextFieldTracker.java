@@ -21,50 +21,28 @@ public class TextFieldTracker {
             IngameIME_Forge.LOG.info("Screen changed: {} -> {}", 
                 lastScreen != null ? lastScreen.getClass().getSimpleName() : "null",
                 currentScreen != null ? currentScreen.getClass().getSimpleName() : "null");
+            
+            if (lastFocusedField != null) {
+                onTextFieldFocusChanged(lastFocusedField, false);
+            }
+            
             lastScreen = currentScreen;
-            lastFocusedField = null;
-        }
-        
-        if (currentScreen == null) {
+            lastFocusedField = (currentScreen != null) ? findFocusedTextField(currentScreen) : null;
+            
             if (lastFocusedField != null) {
-                // 屏幕关闭，失去焦点
-                onTextFieldFocusChanged(lastFocusedField, false);
-                lastFocusedField = null;
+                onTextFieldFocusChanged(lastFocusedField, true);
             }
-            return;
         }
         
-        // 查找当前焦点的文本框
-        GuiTextField currentFocused = findFocusedTextField(currentScreen);
-        
-        if (currentFocused != lastFocusedField) {
-            // 焦点变化
-            IngameIME_Forge.LOG.info("Text field focus changed: {} -> {}", 
-                lastFocusedField != null ? "TextField" : "null",
-                currentFocused != null ? "TextField" : "null");
-                
-            if (lastFocusedField != null) {
-                onTextFieldFocusChanged(lastFocusedField, false);
-            }
-            if (currentFocused != null) {
-                onTextFieldFocusChanged(currentFocused, true);
-            }
-            lastFocusedField = currentFocused;
-        }
-        
-        // 更新光标位置
-        if (currentFocused != null && isFocused(currentFocused)) {
-            updateCaretPosition(currentFocused);
+        if (lastFocusedField != null && isFocused(lastFocusedField)) {
+            updateCaretPosition(lastFocusedField);
         }
     }
     
     private static GuiTextField findFocusedTextField(GuiScreen screen) {
         try {
-            IngameIME_Forge.LOG.debug("Searching for text fields in: {}", screen.getClass().getSimpleName());
-            
             // 使用反射查找屏幕中的所有字段
             Field[] fields = screen.getClass().getDeclaredFields();
-            IngameIME_Forge.LOG.debug("Found {} fields in screen", fields.length);
             
             for (Field field : fields) {
                 field.setAccessible(true);
@@ -72,8 +50,6 @@ public class TextFieldTracker {
                 
                 if (obj instanceof GuiTextField) {
                     GuiTextField textField = (GuiTextField) obj;
-                    IngameIME_Forge.LOG.debug("Found GuiTextField field: {}, focused: {}", 
-                        field.getName(), isFocused(textField));
                     if (isFocused(textField)) {
                         return textField;
                     }
@@ -82,11 +58,9 @@ public class TextFieldTracker {
                 // 检查是否是List<GuiTextField>
                 if (obj instanceof List) {
                     List<?> list = (List<?>) obj;
-                    IngameIME_Forge.LOG.debug("Found List field: {} with {} items", field.getName(), list.size());
                     for (Object item : list) {
                         if (item instanceof GuiTextField) {
                             GuiTextField textField = (GuiTextField) item;
-                            IngameIME_Forge.LOG.debug("Found GuiTextField in list, focused: {}", isFocused(textField));
                             if (isFocused(textField)) {
                                 return textField;
                             }
@@ -98,7 +72,6 @@ public class TextFieldTracker {
             // 尝试检查父类字段
             Class<?> superClass = screen.getClass().getSuperclass();
             if (superClass != null && superClass != GuiScreen.class) {
-                IngameIME_Forge.LOG.debug("Checking superclass: {}", superClass.getSimpleName());
                 Field[] superFields = superClass.getDeclaredFields();
                 for (Field field : superFields) {
                     field.setAccessible(true);
@@ -106,8 +79,6 @@ public class TextFieldTracker {
                     
                     if (obj instanceof GuiTextField) {
                         GuiTextField textField = (GuiTextField) obj;
-                        IngameIME_Forge.LOG.debug("Found GuiTextField in superclass: {}, focused: {}", 
-                            field.getName(), isFocused(textField));
                         if (isFocused(textField)) {
                             return textField;
                         }
@@ -119,18 +90,16 @@ public class TextFieldTracker {
             IngameIME_Forge.LOG.warn("Error finding focused text field: {}", e.getMessage());
         }
         
-        IngameIME_Forge.LOG.debug("No focused text field found");
         return null;
     }
     
     private static boolean isFocused(GuiTextField textField) {
         try {
             // 使用反射获取isFocused字段
-            Field focusedField = GuiTextField.class.getDeclaredField("isFocused");
+            Field focusedField = GuiTextField.class.getDeclaredField("field_146212_l"); // isFocused
             focusedField.setAccessible(true);
             return focusedField.getBoolean(textField);
         } catch (Exception e) {
-            IngameIME_Forge.LOG.debug("Error checking text field focus: {}", e.getMessage());
             return false;
         }
     }
@@ -170,7 +139,7 @@ public class TextFieldTracker {
     
     private static int getTextFieldX(GuiTextField textField) {
         try {
-            Field xField = GuiTextField.class.getDeclaredField("xPosition");
+            Field xField = GuiTextField.class.getDeclaredField("field_146209_f"); // xPosition
             xField.setAccessible(true);
             return xField.getInt(textField);
         } catch (Exception e) {
@@ -180,7 +149,7 @@ public class TextFieldTracker {
     
     private static int getTextFieldY(GuiTextField textField) {
         try {
-            Field yField = GuiTextField.class.getDeclaredField("yPosition");
+            Field yField = GuiTextField.class.getDeclaredField("field_146210_g"); // yPosition
             yField.setAccessible(true);
             return yField.getInt(textField);
         } catch (Exception e) {
@@ -190,7 +159,7 @@ public class TextFieldTracker {
     
     private static int getCursorPosition(GuiTextField textField) {
         try {
-            Field cursorField = GuiTextField.class.getDeclaredField("cursorPosition");
+            Field cursorField = GuiTextField.class.getDeclaredField("field_146225_q"); // cursorPosition
             cursorField.setAccessible(true);
             return cursorField.getInt(textField);
         } catch (Exception e) {

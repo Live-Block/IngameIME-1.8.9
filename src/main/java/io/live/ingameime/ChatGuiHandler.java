@@ -68,9 +68,6 @@ public class ChatGuiHandler {
                 int candidateListHeight = Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT + 6; // 字体高度 + 上下边距
                 int candidateY = chatInputY - candidateListHeight;
                 
-                IngameIME_Forge.LOG.debug("Chat input field position: ({}, {}), height: {}, Candidate position: ({}, {})", 
-                    chatInputX, chatInputY, inputFieldHeight, candidateX, candidateY);
-                
                 if (ClientProxy.Screen != null) {
                     ClientProxy.Screen.setCaretPos(candidateX, candidateY);
                 }
@@ -82,9 +79,6 @@ public class ChatGuiHandler {
                 int candidateX = chatX - 2; // 向左偏移2像素以贴合聊天框边缘
                 int candidateListHeight = Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT + 6;
                 int candidateY = chatY - candidateListHeight;
-                
-                IngameIME_Forge.LOG.debug("Using fallback position: Chat({}, {}), Candidate({}, {})", 
-                    chatX, chatY, candidateX, candidateY);
                 
                 if (ClientProxy.Screen != null) {
                     ClientProxy.Screen.setCaretPos(candidateX, candidateY);

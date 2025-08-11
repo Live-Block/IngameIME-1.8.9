@@ -34,9 +34,6 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
         // 检查全屏状态变化
         checkFullscreenStateChange();
         
-        // 更新文本框跟踪（替代Mixin功能）
-        TextFieldTracker.updateTextFieldTracking();
-        
         // 专门处理聊天界面
         ChatGuiHandler.updateChatStatus();
         
@@ -59,6 +56,12 @@ public class ClientProxy extends CommonProxy implements IMEventHandler {
             if (IMEventHandler == IMStates.OpenedManual && (Mouse.getDX() > 0 || Mouse.getDY() > 0)) {
                 onMouseMove();
             }
+    }
+
+    @SubscribeEvent
+    public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
+        // 在GUI初始化时更新文本框跟踪
+        TextFieldTracker.updateTextFieldTracking();
     }
 
     @SubscribeEvent
