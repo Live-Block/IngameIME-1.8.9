@@ -37,6 +37,10 @@ public class OverlayScreen extends Widget {
     public void setCaretPos(int x, int y) {
         PreEdit.setPos(x, y);
         WInputMode.setPos(x, y);
+        
+        // 直接设置候选词列表位置，因为PreEdit不再显示内容
+        // 候选词应该显示在输入框上方
+        CandidateList.setPos(x, y - 25); // 在输入位置上方25像素显示候选词
     }
     
     public int getCaretX() {

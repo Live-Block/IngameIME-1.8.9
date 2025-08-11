@@ -101,8 +101,21 @@ public class Internal {
                     //Hide Indicator when PreEdit start
                     if (arg0 == CompositionState.Begin) ClientProxy.Screen.WInputMode.setActive(false);
 
-                    if (arg1 != null) ClientProxy.Screen.PreEdit.setContent(arg1.getContent(), arg1.getSelStart());
-                    else ClientProxy.Screen.PreEdit.setContent(null, -1);
+                    // 将拼音直接输入到游戏输入框，而不是显示在覆盖层
+                    if (arg1 != null && arg1.getContent() != null) {
+                        String preEditContent = arg1.getContent();
+                        LOG.info("PreEdit content: {}", preEditContent);
+                        
+                        // 将拼音插入到游戏输入框中
+                        inputPreEditToGameField(preEditContent);
+                        
+                        // 不设置覆盖层的PreEdit内容，让拼音显示在游戏输入框内
+                        ClientProxy.Screen.PreEdit.setContent(null, -1);
+                    } else {
+                        // 清除游戏输入框中的拼音
+                        clearPreEditFromGameField();
+                        ClientProxy.Screen.PreEdit.setContent(null, -1);
+                    }
                 } catch (Throwable e) {
                     LOG.error("Exception thrown during callback handling", e);
                 }
@@ -115,9 +128,13 @@ public class Internal {
             protected void call(String arg0) {
                 try {
                     LOG.info("Commit: {}", arg0);
+                    
+                    // 先清除预编辑的拼音
+                    clearPreEditFromGameField();
+                    
                     GuiScreen screen = Minecraft.getMinecraft().currentScreen;
                     if (screen != null) {
-                        // 简化的字符注入，不使用Mixin
+                        // 然后插入最终的字符
                         simulateCharacterInput(arg0);
                     }
                 } catch (Throwable e) {
@@ -352,6 +369,155 @@ public class Internal {
             
         } catch (Exception e) {
             LOG.error("Failed to update PreEdit rect", e);
+        }
+    }
+    
+    // 存储当前预编辑状态
+    private static String currentPreEditText = "";
+    private static int preEditStartPos = -1;
+    
+    /**
+     * 将拼音输入到游戏输入框中
+     */
+    private static void inputPreEditToGameField(String preEditContent) {
+        try {
+            GuiScreen currentScreen = Minecraft.getMinecraft().currentScreen;
+            if (currentScreen == null) {
+                return;
+            }
+            
+            // 处理聊天界面
+            if (currentScreen instanceof net.minecraft.client.gui.GuiChat) {
+                inputPreEditToChatField(preEditContent);
+            } else {
+                // 处理其他文本输入界面
+                LOG.debug("PreEdit input for non-chat GUI not implemented yet");
+            }
+            
+        } catch (Exception e) {
+            LOG.error("Failed to input PreEdit to game field", e);
+        }
+    }
+    
+    /**
+     * 清除游戏输入框中的拼音
+     */
+    private static void clearPreEditFromGameField() {
+        try {
+            GuiScreen currentScreen = Minecraft.getMinecraft().currentScreen;
+            if (currentScreen == null) {
+                return;
+            }
+            
+            // 处理聊天界面
+            if (currentScreen instanceof net.minecraft.client.gui.GuiChat) {
+                clearPreEditFromChatField();
+            } else {
+                // 处理其他文本输入界面
+                LOG.debug("PreEdit clear for non-chat GUI not implemented yet");
+            }
+            
+            // 重置预编辑状态
+            currentPreEditText = "";
+            preEditStartPos = -1;
+            
+        } catch (Exception e) {
+            LOG.error("Failed to clear PreEdit from game field", e);
+        }
+    }
+    
+    /**
+     * 将拼音输入到聊天输入框
+     */
+    private static void inputPreEditToChatField(String preEditContent) {
+        try {
+            net.minecraft.client.gui.GuiChat chatGui = (net.minecraft.client.gui.GuiChat) Minecraft.getMinecraft().currentScreen;
+            
+            // 使用反射获取聊天输入框
+            java.lang.reflect.Field inputFieldField = net.minecraft.client.gui.GuiChat.class.getDeclaredField("field_146415_a"); // inputField
+            inputFieldField.setAccessible(true);
+            net.minecraft.client.gui.GuiTextField inputField = (net.minecraft.client.gui.GuiTextField) inputFieldField.get(chatGui);
+            
+            if (inputField != null) {
+                String currentText = inputField.getText();
+                int cursorPos = getCursorPosition(inputField);
+                
+                // 如果是第一次输入拼音，记录起始位置
+                if (currentPreEditText.isEmpty()) {
+                    preEditStartPos = cursorPos;
+                }
+                
+                // 计算新的文本内容
+                String beforePreEdit = currentText.substring(0, preEditStartPos);
+                String afterPreEdit = "";
+                
+                // 如果之前有预编辑文本，需要移除它
+                if (!currentPreEditText.isEmpty()) {
+                    int afterPreEditStart = preEditStartPos + currentPreEditText.length();
+                    if (afterPreEditStart <= currentText.length()) {
+                        afterPreEdit = currentText.substring(afterPreEditStart);
+                    }
+                } else {
+                    afterPreEdit = currentText.substring(cursorPos);
+                }
+                
+                // 插入新的预编辑文本
+                String newText = beforePreEdit + preEditContent + afterPreEdit;
+                inputField.setText(newText);
+                
+                // 设置光标位置到拼音末尾
+                setCursorPosition(inputField, preEditStartPos + preEditContent.length());
+                
+                // 更新当前预编辑文本
+                currentPreEditText = preEditContent;
+                
+                LOG.debug("Updated PreEdit in chat field: '{}'", preEditContent);
+            }
+            
+        } catch (Exception e) {
+            LOG.error("Failed to input PreEdit to chat field", e);
+        }
+    }
+    
+    /**
+     * 从聊天输入框清除拼音
+     */
+    private static void clearPreEditFromChatField() {
+        try {
+            if (currentPreEditText.isEmpty() || preEditStartPos == -1) {
+                return; // 没有预编辑内容需要清除
+            }
+            
+            net.minecraft.client.gui.GuiChat chatGui = (net.minecraft.client.gui.GuiChat) Minecraft.getMinecraft().currentScreen;
+            
+            // 使用反射获取聊天输入框
+            java.lang.reflect.Field inputFieldField = net.minecraft.client.gui.GuiChat.class.getDeclaredField("field_146415_a"); // inputField
+            inputFieldField.setAccessible(true);
+            net.minecraft.client.gui.GuiTextField inputField = (net.minecraft.client.gui.GuiTextField) inputFieldField.get(chatGui);
+            
+            if (inputField != null) {
+                String currentText = inputField.getText();
+                
+                // 移除预编辑文本
+                String beforePreEdit = currentText.substring(0, preEditStartPos);
+                String afterPreEdit = "";
+                
+                int afterPreEditStart = preEditStartPos + currentPreEditText.length();
+                if (afterPreEditStart <= currentText.length()) {
+                    afterPreEdit = currentText.substring(afterPreEditStart);
+                }
+                
+                String newText = beforePreEdit + afterPreEdit;
+                inputField.setText(newText);
+                
+                // 恢复光标位置
+                setCursorPosition(inputField, preEditStartPos);
+                
+                LOG.debug("Cleared PreEdit from chat field");
+            }
+            
+        } catch (Exception e) {
+            LOG.error("Failed to clear PreEdit from chat field", e);
         }
     }
 }

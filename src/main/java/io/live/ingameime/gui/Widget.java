@@ -35,6 +35,14 @@ public class Widget extends Gui {
 
         isDirty = false;
     }
+    
+    /**
+     * 强制重新布局，即使widget状态没有改变
+     */
+    public void forceLayout() {
+        isDirty = true;
+        layout();
+    }
 
     public void draw() {
         drawRect(X, Y, X + Width, Y + Height, Background);
@@ -54,5 +62,13 @@ public class Widget extends Gui {
     
     public int getY() {
         return Y;
+    }
+    
+    public int getWidth() {
+        return Width;
+    }
+    
+    public int getHeight() {
+        return Height;
     }
 }
