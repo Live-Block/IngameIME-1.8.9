@@ -103,7 +103,7 @@ public class Internal {
             @Override
             protected void call(CompositionState arg0, PreEditContext arg1) {
                 try {
-                    LOG.info("PreEdit State: {}", arg0);
+            // Reduce verbose logs: do not log user typing states in normal flow
 
                     //Hide Indicator when PreEdit start
                     if (arg0 == CompositionState.Begin) ClientProxy.Screen.WInputMode.setActive(false);
@@ -120,7 +120,7 @@ public class Internal {
             @Override
             protected void call(String arg0) {
                 try {
-                    LOG.info("Commit: {}", arg0);
+                    // Privacy: do not log committed user input content
                     GuiScreen screen = Minecraft.getMinecraft().currentScreen;
                     if (screen != null) {
                         // NEI Integration

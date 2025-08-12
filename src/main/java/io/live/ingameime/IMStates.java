@@ -9,7 +9,7 @@ public enum IMStates implements IMEventHandler {
         public IMStates onControlFocus(@Nonnull Object control, boolean focused) {
             if (focused) {
                 ActiveControl = control;
-                IngameIME_Forge.LOG.info("Opened by control focus: {}", ActiveControl.getClass());
+                // Reduce log noise: avoid logging control class
                 Internal.setActivated(true);
                 return OpenedAuto;
             } else {
@@ -19,7 +19,6 @@ public enum IMStates implements IMEventHandler {
 
         @Override
         public IMStates onToggleKey() {
-            IngameIME_Forge.LOG.info("Turned on by toggle key");
             Internal.setActivated(true);
             return OpenedManual;
         }
@@ -34,7 +33,6 @@ public enum IMStates implements IMEventHandler {
         @Override
         public IMStates onMouseMove() {
             if (!Config.TurnOffOnMouseMove.getBoolean()) return this;
-            IngameIME_Forge.LOG.info("Turned off by mouse move");
             Internal.setActivated(false);
             return Disabled;
         }
@@ -45,7 +43,6 @@ public enum IMStates implements IMEventHandler {
             if (!focused && control != ActiveControl) return this;
 
             if (!focused) {
-                IngameIME_Forge.LOG.info("Turned off by losing control focus: {}", ActiveControl.getClass());
                 Internal.setActivated(false);
                 return Disabled;
             }
@@ -53,7 +50,6 @@ public enum IMStates implements IMEventHandler {
             // Update active focused control
             if (ActiveControl != control) {
                 ActiveControl = control;
-                IngameIME_Forge.LOG.info("Opened by control focus: {}", ActiveControl.getClass());
                 Internal.setActivated(true);
                 ClientProxy.Screen.WInputMode.setActive(true);
             }
@@ -68,7 +64,6 @@ public enum IMStates implements IMEventHandler {
 
     @Override
     public IMStates onScreenClose() {
-        if (ActiveScreen != null) IngameIME_Forge.LOG.info("Screen closed: {}", ActiveScreen.getClass());
         Internal.setActivated(false);
         ActiveScreen = null;
         return Disabled;
@@ -78,7 +73,6 @@ public enum IMStates implements IMEventHandler {
     public IMStates onScreenOpen(Object screen) {
         if (ActiveScreen == screen) return this;
         ActiveScreen = screen;
-        if (ActiveScreen != null) IngameIME_Forge.LOG.info("Screen Opened: {}", ActiveScreen.getClass());
         return this;
     }
 
@@ -89,7 +83,6 @@ public enum IMStates implements IMEventHandler {
 
     @Override
     public IMStates onToggleKey() {
-        IngameIME_Forge.LOG.info("Turned off by toggle key");
         Internal.setActivated(false);
         return Disabled;
     }
