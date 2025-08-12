@@ -52,10 +52,11 @@ public class WidgetCandidateList extends Widget {
     @Override
     public void draw() {
         if (!isActive()) return;
-        super.draw();
+        // Raise background by 1 px while keeping the text baseline unchanged
+        drawRect(X, Y - 1, X + Width, Y + Height - 1, Background);
 
         int drawX = X + Padding;
-        int drawY = Y + Padding; // baseline within panel
+        int drawY = Y + Padding - 1; // baseline for text
         int index = 1;
         for (String s : Candidates) {
             drawItem.setIndex(index++);

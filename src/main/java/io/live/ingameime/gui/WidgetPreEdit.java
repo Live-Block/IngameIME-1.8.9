@@ -53,12 +53,15 @@ public class WidgetPreEdit extends Widget {
     @Override
     public void draw() {
         if (!isActive()) return;
-        super.draw();
+        // Slightly raise background by 1px for better vertical alignment
+        int bgShift = 1; // move background up by 1 pixel
+        drawRect(X, Y - bgShift, X + Width, Y + Height - bgShift, Background);
         String beforeCursor = Content.substring(0, Cursor);
         String afterCursor = Content.substring(Cursor);
         int x = Minecraft.getMinecraft().fontRendererObj.drawString(beforeCursor, X + Padding, Y + Padding, TextColor);
         // Cursor
-        drawRect(x + 1, Y + Padding, x + 2, Y + Padding + Height, TextColor);
+        int cursorTop = Y + Padding - 1; // raise the cursor by 1px to match background shift
+        drawRect(x + 1, cursorTop, x + 2, cursorTop + Height, TextColor);
         Minecraft.getMinecraft().fontRendererObj.drawString(afterCursor, x + CursorWidth, Y + Padding, TextColor);
     }
 }
