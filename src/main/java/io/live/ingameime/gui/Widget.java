@@ -6,8 +6,8 @@ import net.minecraft.client.gui.ScaledResolution;
 
 public class Widget extends Gui {
     public int offsetX, offsetY;
-    public int TextColor = 0xFF000000;
-    public int Background = 0xEBEBEBEB;
+    public int TextColor = 0xFF_00_00_00;
+    public int Background = 0xEB_EB_EB_EB;
     public int Padding = 1;
     public int X, Y;
     public int Width, Height;
@@ -27,21 +27,15 @@ public class Widget extends Gui {
         Y = offsetY + (DrawInline ? 0 : Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT);
 
         // Check if exceed screen
-        ScaledResolution scaledresolution = new ScaledResolution(Minecraft.getMinecraft());
+        ScaledResolution scaledresolution = new ScaledResolution(
+                Minecraft.getMinecraft()
+        );
         int displayHeight = scaledresolution.getScaledHeight();
         int displayWidth = scaledresolution.getScaledWidth();
         if (X + Width > displayWidth) X = Math.max(0, displayWidth - Width);
         if (Y + Height > displayHeight) Y = (DrawInline ? displayHeight : offsetY) - Height;
 
         isDirty = false;
-    }
-    
-    /**
-     * 强制重新布局，即使widget状态没有改变
-     */
-    public void forceLayout() {
-        isDirty = true;
-        layout();
     }
 
     public void draw() {
@@ -54,21 +48,5 @@ public class Widget extends Gui {
         offsetY = y;
         isDirty = true;
         layout();
-    }
-    
-    public int getX() {
-        return X;
-    }
-    
-    public int getY() {
-        return Y;
-    }
-    
-    public int getWidth() {
-        return Width;
-    }
-    
-    public int getHeight() {
-        return Height;
     }
 }

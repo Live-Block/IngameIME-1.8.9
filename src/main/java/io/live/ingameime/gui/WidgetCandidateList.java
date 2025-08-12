@@ -62,7 +62,7 @@ public class WidgetCandidateList extends Widget {
                 // Different background for selected one
                 int xLen = Minecraft.getMinecraft().fontRendererObj.getStringWidth(formatted);
                 int fontH = Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT;
-                drawRect(x - 1, Y + Padding - 1, x + xLen, Y + Padding + fontH, 0xEBB2DAE0);
+                drawRect(x - 1, Y + Padding - 1, x + xLen, Y + Padding + fontH, 0xEB_B2DAE0);
                 Minecraft.getMinecraft().fontRendererObj.drawString(
                         formatted,
                         x,

@@ -4,6 +4,7 @@ import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
 
 import java.io.File;
+import java.util.Arrays;
 
 public class Config {
     // API
@@ -24,14 +25,7 @@ public class Config {
                 "Config the API to use in Windows platform (TextServiceFramework, Imm32)"
         );
         API_Windows.setValidValues(new String[]{"TextServiceFramework", "Imm32"});
-        boolean isValidValue = false;
-        for (String validValue : API_Windows.getValidValues()) {
-            if (validValue.equals(API_Windows.getString())) {
-                isValidValue = true;
-                break;
-            }
-        }
-        if (!isValidValue)
+        if (Arrays.stream(API_Windows.getValidValues()).noneMatch(it -> it.equals(API_Windows.getString())))
             API_Windows.set(API_Windows.getDefault());
         API_Windows.setRequiresMcRestart(true);
 
