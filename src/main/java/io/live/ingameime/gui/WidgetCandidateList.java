@@ -4,15 +4,15 @@ import net.minecraft.client.Minecraft;
 
 import java.util.List;
 
+// 从1.17的 IngameIME 移植个人认为更好看的 UI
 public class WidgetCandidateList extends Widget {
     private List<String> Candidates = null;
-    private int Selected = -1; // kept for API compatibility, not used in 1.17 style
+    private int Selected = -1;
 
     private final CandidateEntry drawItem = new CandidateEntry();
 
     WidgetCandidateList() {
-        // 1.17 style: small outer vertical padding, thin frame
-        Padding = 3; // will be applied by base Widget
+        Padding = 3;
     }
 
     public void setContent(List<String> candidates, int selected) {
@@ -52,7 +52,7 @@ public class WidgetCandidateList extends Widget {
     @Override
     public void draw() {
         if (!isActive()) return;
-        // Raise background by 1 px while keeping the text baseline unchanged
+        // 没啥好说的, 细调 UI 位置
         drawRect(X, Y - 1, X + Width, Y + Height - 1, Background);
 
         int drawX = X + Padding;
@@ -87,29 +87,26 @@ public class WidgetCandidateList extends Widget {
         }
 
         int getTotalWidth() {
-            // Entry has its own horizontal padding like 1.17 (2 px on both sides)
-            return 2 /*left*/ + getIndexAreaWidth() + getTextWidth() + 2 /*right*/;
+            // 改为类似于 1.17 的 padding
+            return 2 + getIndexAreaWidth() + getTextWidth() + 2;
         }
 
         int getTotalHeight() {
-            // Match 1.17: entry height equals font line height;
-            // outer panel vertical spacing is provided by parent Padding
             return getContentHeight();
         }
 
         void draw(int x, int y, int textColor, int /*unused*/ bg) {
-            // Local paddings match 1.17 implementation
+            // 改为类似于 1.17 的 padding
             int offsetX = x + 2;
-            int baselineY = y; // parent already offsets by Padding
+            int baselineY = y;
 
-            // Draw centered index within fixed index area
             String idx = Integer.toString(index);
             int indexAreaW = getIndexAreaWidth();
             int idxTextW = Minecraft.getMinecraft().fontRendererObj.getStringWidth(idx);
             int centeredX = offsetX + (indexAreaW - idxTextW) / 2;
             Minecraft.getMinecraft().fontRendererObj.drawString(idx, centeredX, baselineY, 0xFF555555);
 
-            // Draw candidate text
+            // 渲染text
             offsetX += indexAreaW;
             Minecraft.getMinecraft().fontRendererObj.drawString(text, offsetX, baselineY, textColor);
         }

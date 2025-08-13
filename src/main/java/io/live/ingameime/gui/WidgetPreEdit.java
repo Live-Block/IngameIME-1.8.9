@@ -9,7 +9,7 @@ public class WidgetPreEdit extends Widget {
     private final int CursorWidth = 3;
     private String Content = null;
     private int Cursor = -1;
-    // Cache to reduce per-frame substring/width computation
+    // 通过缓存优化性能
     private String CachedBefore = null;
     private String CachedAfter = null;
     private int CachedBeforeWidth = 0;
@@ -19,7 +19,7 @@ public class WidgetPreEdit extends Widget {
     public void setContent(String content, int cursor) {
         Cursor = cursor;
         Content = content;
-        // Prepare cached segments and metrics only when content changes
+        // 只有内容变化时才比较缓存的参数
         if (Content != null) {
             int safeCursor = Math.max(0, Math.min(Cursor, Content.length()));
             CachedBefore = Content.substring(0, safeCursor);
@@ -56,7 +56,7 @@ public class WidgetPreEdit extends Widget {
             list.setPos(X, Y - list.Height);
         }
 
-        // Update Rect
+        // 更新Rect
         if (!Internal.LIBRARY_LOADED || Internal.InputCtx == null) return;
         PreEditRect rect = new PreEditRect();
         rect.setX(X);
@@ -74,13 +74,12 @@ public class WidgetPreEdit extends Widget {
     @Override
     public void draw() {
         if (!isActive()) return;
-        // 背景尺寸基于缓存的内容与宽度计算，避免每帧 substring/测量
+        // 背景尺寸基于缓存的内容与宽度计算，避免每帧都测量，优化性能
         int fontHeight = CachedFontHeight;
         String beforeCursor = CachedBefore;
         String afterCursor = CachedAfter;
 
         int baseX = X + Padding;
-        // Raise preedit text by 1px
         int baseY = Y + Padding - 1;
         // 使用透明绘制进行一次测量，保证背景与文字真实宽度一致
         int measureX1 = Minecraft.getMinecraft().fontRendererObj.drawString(beforeCursor, baseX, baseY, 0x00000000);
@@ -99,7 +98,7 @@ public class WidgetPreEdit extends Widget {
         int cursorX = baseX + beforeWidth;
 		int cursorTop = baseY; // 与背景上移对齐
 		int cursorBottom = cursorTop + fontHeight;
-		// Blink: show caret 500ms per second
+		// 每 500ms 光标闪烁一次
 		boolean caretVisible = (System.currentTimeMillis() % 1000) > 500;
 		if (caretVisible) {
 			drawRect(cursorX + 1, cursorTop, cursorX + 2, cursorBottom, TextColor);

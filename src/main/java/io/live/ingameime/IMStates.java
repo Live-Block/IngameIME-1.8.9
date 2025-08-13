@@ -9,7 +9,6 @@ public enum IMStates implements IMEventHandler {
         public IMStates onControlFocus(@Nonnull Object control, boolean focused) {
             if (focused) {
                 ActiveControl = control;
-                // Reduce log noise: avoid logging control class
                 Internal.setActivated(true);
                 return OpenedAuto;
             } else {
@@ -26,7 +25,6 @@ public enum IMStates implements IMEventHandler {
     }, OpenedManual {
         @Override
         public IMStates onControlFocus(@Nonnull Object control, boolean focused) {
-            // Ignore all focus event
             return this;
         }
 
@@ -39,7 +37,6 @@ public enum IMStates implements IMEventHandler {
     }, OpenedAuto {
         @Override
         public IMStates onControlFocus(@Nonnull Object control, boolean focused) {
-            // Ignore not active focus one
             if (!focused && control != ActiveControl) return this;
 
             if (!focused) {
@@ -47,7 +44,7 @@ public enum IMStates implements IMEventHandler {
                 return Disabled;
             }
 
-            // Update active focused control
+            // 更新活动中的控制器
             if (ActiveControl != control) {
                 ActiveControl = control;
                 Internal.setActivated(true);

@@ -19,14 +19,14 @@ public class Widget extends Gui {
     }
 
     public void layout() {
-        // Update Width & Height before positioning
+        // 定位前更新参数
         Width += 2 * Padding;
         Height += 2 * Padding;
 
         X = offsetX;
         Y = offsetY + (DrawInline ? 0 : Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT);
 
-        // Check if exceed screen
+        // 检查是否超出屏幕
         ScaledResolution scaledresolution = new ScaledResolution(
                 Minecraft.getMinecraft()
         );

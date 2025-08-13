@@ -1,7 +1,7 @@
 [
 {
   "modid": "ingameime",
-  "name": "IngameIME",
+  "name": "IngameIME-PVP",
   "description": "Use InputMethod in full screen minecraft",
   "version": "${version}",
   "mcversion": "${mcversion}",
@@ -10,6 +10,7 @@
   "authorList": ["Live_block"],
   "credits": "",
   "logoFile": "",
+  "requiredMods": ["mixinbooter"],
   "screenshots": [],
   "dependencies": []
 }

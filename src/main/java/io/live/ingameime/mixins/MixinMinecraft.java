@@ -14,7 +14,7 @@ public class MixinMinecraft {
     private static boolean prevImeActivated = false;
     @Inject(method = "toggleFullscreen", at = @At(value = "HEAD"))
     void preToggleFullscreen(CallbackInfo ci) {
-        // Cache current IME activation state and then recreate context
+        // 缓存输入法状态
         prevImeActivated = Internal.getActivated();
         Internal.destroyInputCtx();
     }
@@ -22,23 +22,23 @@ public class MixinMinecraft {
     @Inject(method = "toggleFullscreen", at = @At(value = "RETURN"))
     void postToggleFullscreen(CallbackInfo ci) {
         Internal.createInputCtx();
-        // Restore previous activation state so chat doesn't lose IME capability
+        // 还原输入法状态
         Internal.setActivated(prevImeActivated);
     }
 
     @Inject(method = "displayGuiScreen", at = @At(value = "RETURN"))
     void postDisplayScreen(GuiScreen guiScreenIn, CallbackInfo ci) {
-        // Reset pos when screen changes
+        // 当游戏窗口变化时, 重置Pos
         ClientProxy.Screen.setCaretPos(0, 0);
-        // Disable input method when not screen
+        // 关闭输入法
         GuiScreen currentScreen = Minecraft.getMinecraft().currentScreen;
         if (currentScreen == null) {
             ClientProxy.INSTANCE.onScreenClose();
-            // Make sure IME deactivates but remember last state
+            // 确保输入法能保存状态
             prevImeActivated = false;
         } else {
             ClientProxy.INSTANCE.onScreenOpen(currentScreen);
-            // If chat screen opened while fullscreen just toggled, keep activation state
+            // 如果按了F11更改窗口状态, 保存输入法先前状态
             if (prevImeActivated) Internal.setActivated(true);
         }
     }

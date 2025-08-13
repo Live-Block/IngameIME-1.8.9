@@ -7,14 +7,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 @Mod(
-        modid = Tags.MODID,
-        version = Tags.VERSION,
-        name = Tags.MODNAME,
+        modid = "ingameime",
+        version = "1.0.0",
+        name = "IngameIME-PVP",
         acceptedMinecraftVersions = "[1.8.9]",
-        acceptableRemoteVersions = "*"
+        acceptableRemoteVersions = "*",
+        dependencies = "required-after:mixinbooter"
 )
 public class IngameIME_Forge {
-    public static final Logger LOG = LogManager.getLogger(Tags.MODNAME);
+    public static final Logger LOG = LogManager.getLogger("IngameIME-PVP");
     @SidedProxy(clientSide = "io.live.ingameime.ClientProxy", serverSide = "io.live.ingameime.CommonProxy")
     public static CommonProxy proxy;
 
