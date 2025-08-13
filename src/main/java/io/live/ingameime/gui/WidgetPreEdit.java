@@ -62,7 +62,8 @@ public class WidgetPreEdit extends Widget {
 
         // 使用 drawString(透明色)进行一次“测量”，以得到与真实绘制完全一致的宽度（1.7.10 的 getStringWidth 可能与实际渲染存在像素级差异）
         int baseX = X + Padding;
-        int baseY = Y + Padding;
+        // Raise preedit text by 1px
+        int baseY = Y + Padding - 1;
         int measureX1 = Minecraft.getMinecraft().fontRendererObj.drawString(beforeCursor, baseX, baseY, 0x00000000);
         int measureX2 = Minecraft.getMinecraft().fontRendererObj.drawString(afterCursor, measureX1 + CursorWidth, baseY, 0x00000000);
         int measuredContentWidth = measureX2 - baseX;
@@ -78,9 +79,13 @@ public class WidgetPreEdit extends Widget {
 
         // 光标高度应等于字体行高，而不是包含 Padding 的整体高度
         int cursorX = baseX + beforeWidth;
-        int cursorTop = baseY - 1; // 与背景上移对齐
-        int cursorBottom = cursorTop + fontHeight;
-        drawRect(cursorX + 1, cursorTop, cursorX + 2, cursorBottom, TextColor);
+		int cursorTop = baseY; // 与背景上移对齐
+		int cursorBottom = cursorTop + fontHeight;
+		// Blink: show caret 500ms per second
+		boolean caretVisible = (System.currentTimeMillis() % 1000) > 500;
+		if (caretVisible) {
+			drawRect(cursorX + 1, cursorTop, cursorX + 2, cursorBottom, TextColor);
+		}
 
         // 绘制游标后的文本
         Minecraft.getMinecraft().fontRendererObj.drawString(afterCursor, cursorX + CursorWidth, baseY, TextColor);
