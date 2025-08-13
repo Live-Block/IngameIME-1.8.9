@@ -74,11 +74,17 @@ public class Internal {
     }
 
     public static void destroyInputCtx() {
-        if (InputCtx != null) {
-            InputCtx.delete();
-            InputCtx = null;
-            LOG.info("InputContext has destroyed!");
-        }
+        if (InputCtx == null) return;
+        try {
+            // Unregister callbacks first to avoid native calls after destruction
+            InputCtx.setCallback((PreEditCallback) null);
+            InputCtx.setCallback((CommitCallback) null);
+            InputCtx.setCallback((CandidateListCallback) null);
+            InputCtx.setCallback((InputModeCallback) null);
+        } catch (Throwable ignored) {}
+        InputCtx.delete();
+        InputCtx = null;
+        LOG.info("InputContext has destroyed!");
     }
 
     public static void createInputCtx() {
@@ -177,6 +183,7 @@ public class Internal {
         };
         inputModeCallback = new InputModeCallback(inputModeCallbackProxy);
 
+        // Register callbacks after context created
         InputCtx.setCallback(preEditCallback);
         InputCtx.setCallback(commitCallback);
         InputCtx.setCallback(candidateListCallback);
