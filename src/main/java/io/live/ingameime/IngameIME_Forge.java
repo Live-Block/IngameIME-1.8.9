@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 @Mod(
         modid = "ingameime",
-        version = "1.0.0",
+        version = "1.0.1",
         name = "IngameIME-PVP",
         acceptedMinecraftVersions = "[1.8.9]",
         acceptableRemoteVersions = "*",
