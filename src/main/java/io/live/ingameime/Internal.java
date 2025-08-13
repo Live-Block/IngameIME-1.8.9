@@ -30,13 +30,43 @@ public class Internal {
     static CandidateListCallback candidateListCallback = null;
     static InputModeCallback inputModeCallback = null;
 
+    // Cache NEI reflection to avoid repeated lookups
+    static class NEIBridge {
+        static Class<?> managerClass;
+        static java.lang.reflect.Method getManager;
+        static java.lang.reflect.Method keyTyped;
+
+        static void init() throws Exception {
+            if (managerClass != null) return;
+            managerClass = Class.forName("codechicken.nei.guihook.GuiContainerManager");
+            getManager = managerClass.getMethod("getManager");
+            keyTyped = managerClass.getMethod("keyTyped", char.class, int.class);
+        }
+
+        static void dispatchTyped(String text) throws Exception {
+            init();
+            Object manager = getManager.invoke(null);
+            if (manager != null) {
+                for (char c : text.toCharArray()) {
+                    keyTyped.invoke(manager, c, Keyboard.KEY_NONE);
+                }
+            }
+        }
+    }
+
     private static void tryLoadLibrary(String libName) {
         if (!LIBRARY_LOADED) try {
             InputStream lib = IngameIME.class.getClassLoader().getResourceAsStream(libName);
             if (lib == null) throw new RuntimeException("Required library resource not exist!");
             Path path = Files.createTempFile("IngameIME-Native", null);
-            Files.copy(lib, path, StandardCopyOption.REPLACE_EXISTING);
-            System.load(path.toString());
+            try {
+                Files.copy(lib, path, StandardCopyOption.REPLACE_EXISTING);
+                // 清理临时文件
+                try { path.toFile().deleteOnExit(); } catch (Throwable ignored) {}
+                System.load(path.toString());
+            } finally {
+                try { lib.close(); } catch (Throwable ignored) {}
+            }
             LIBRARY_LOADED = true;
             LOG.info("Library [{}] has loaded!", libName);
         } catch (Throwable e) {
@@ -132,18 +162,10 @@ public class Internal {
                         // NEI Integration
                         if (Loader.isModLoaded("NotEnoughItems")) {
                             try {
-                                Class<?> managerClass = Class.forName("codechicken.nei.guihook.GuiContainerManager");
-                                java.lang.reflect.Method getManager = managerClass.getMethod("getManager");
-                                Object manager = getManager.invoke(null);
-                                if (manager != null) {
-                                    java.lang.reflect.Method keyTyped = manager.getClass().getMethod("keyTyped", char.class, int.class);
-                                    for (char c : arg0.toCharArray()) {
-                                        keyTyped.invoke(manager, c, Keyboard.KEY_NONE);
-                                    }
-                                    return;
-                                }
+                                NEIBridge.dispatchTyped(arg0);
+                                return;
                             } catch (Throwable ignored) {
-                                // NEI not present at compile/runtime or API changed; fall back to vanilla handling
+                                // Fall back to vanilla handling
                             }
                         }
 
@@ -189,8 +211,7 @@ public class Internal {
         InputCtx.setCallback(candidateListCallback);
         InputCtx.setCallback(inputModeCallback);
 
-        // Free unused native object
-        System.gc();
+        // Avoid explicit GC to reduce jank; let JVM handle it
     }
 
     static void loadLibrary() {

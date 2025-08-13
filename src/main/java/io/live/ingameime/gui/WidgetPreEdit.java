@@ -9,10 +9,31 @@ public class WidgetPreEdit extends Widget {
     private final int CursorWidth = 3;
     private String Content = null;
     private int Cursor = -1;
+    // Cache to reduce per-frame substring/width computation
+    private String CachedBefore = null;
+    private String CachedAfter = null;
+    private int CachedBeforeWidth = 0;
+    private int CachedAfterWidth = 0;
+    private int CachedFontHeight = 0;
 
     public void setContent(String content, int cursor) {
         Cursor = cursor;
         Content = content;
+        // Prepare cached segments and metrics only when content changes
+        if (Content != null) {
+            int safeCursor = Math.max(0, Math.min(Cursor, Content.length()));
+            CachedBefore = Content.substring(0, safeCursor);
+            CachedAfter = Content.substring(safeCursor);
+            CachedBeforeWidth = Minecraft.getMinecraft().fontRendererObj.getStringWidth(CachedBefore);
+            CachedAfterWidth = Minecraft.getMinecraft().fontRendererObj.getStringWidth(CachedAfter);
+            CachedFontHeight = Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT;
+        } else {
+            CachedBefore = null;
+            CachedAfter = null;
+            CachedBeforeWidth = 0;
+            CachedAfterWidth = 0;
+            CachedFontHeight = 0;
+        }
         isDirty = true;
         layout();
     }
@@ -21,8 +42,8 @@ public class WidgetPreEdit extends Widget {
     public void layout() {
         if (!isDirty) return;
         if (isActive()) {
-            Width = Minecraft.getMinecraft().fontRendererObj.getStringWidth(Content) + CursorWidth;
-            Height = Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT;
+            Width = CachedBeforeWidth + CursorWidth + CachedAfterWidth;
+            Height = CachedFontHeight;
         } else {
             Width = Height = 0;
         }
@@ -53,17 +74,15 @@ public class WidgetPreEdit extends Widget {
     @Override
     public void draw() {
         if (!isActive()) return;
-        // 背景尺寸基于当前内容即时计算，避免滞后导致文本溢出
-        int fontHeight = Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT;
-        // 保障游标位置合法，并先得到分段文本
-        int safeCursor = Math.max(0, Math.min(Cursor, Content.length()));
-        String beforeCursor = Content.substring(0, safeCursor);
-        String afterCursor = Content.substring(safeCursor);
+        // 背景尺寸基于缓存的内容与宽度计算，避免每帧 substring/测量
+        int fontHeight = CachedFontHeight;
+        String beforeCursor = CachedBefore;
+        String afterCursor = CachedAfter;
 
-        // 使用 drawString(透明色)进行一次“测量”，以得到与真实绘制完全一致的宽度（1.7.10 的 getStringWidth 可能与实际渲染存在像素级差异）
         int baseX = X + Padding;
         // Raise preedit text by 1px
         int baseY = Y + Padding - 1;
+        // 使用透明绘制进行一次测量，保证背景与文字真实宽度一致
         int measureX1 = Minecraft.getMinecraft().fontRendererObj.drawString(beforeCursor, baseX, baseY, 0x00000000);
         int measureX2 = Minecraft.getMinecraft().fontRendererObj.drawString(afterCursor, measureX1 + CursorWidth, baseY, 0x00000000);
         int measuredContentWidth = measureX2 - baseX;
@@ -73,8 +92,7 @@ public class WidgetPreEdit extends Widget {
         int bgShift = 1;
         drawRect(X, Y - bgShift, X + bgWidth, Y + bgHeight - bgShift, Background);
 
-        // 明确使用 getStringWidth 计算位置，避免依赖 drawString 的返回值导致的偏差
-        // 绘制游标前文本（再次正常绘制）
+        // 绘制游标前文本，并以返回值获取实际像素位置
         int beforeWidth = Minecraft.getMinecraft().fontRendererObj.drawString(beforeCursor, baseX, baseY, TextColor) - baseX;
 
         // 光标高度应等于字体行高，而不是包含 Padding 的整体高度
