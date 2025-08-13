@@ -1,2 +1,27 @@
-# IngameIME-PVP
-别问为什么移植这东西到1.8.9，问就是为了玩PVP打字能舒服点（
+# IngameIME for 1.8.9
+
+![Icon](docs/IngameIME-Icon.png)
+
+Use `InputMethod` in **Full screen** Minecraft!
+
+## Preview
+
+### Window Mode
+
+> This style is the same with Full screen Mode
+
+### Full screen Mode
+
+![Full screen Mode](docs/FullScreen-Mode.gif)
+
+## Special Thanks
+
+- [Windmill-City](https://github.com/Windmill-City): Mod founder
+
+## Supported Platforms
+
+| Platform | Supported |
+| -------- | --------- |
+| Windows  | √         |
+| Linux    | ×         |
+| MacOS    | ×         |

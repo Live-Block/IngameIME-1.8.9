@@ -9,7 +9,7 @@
   "updateUrl": "",
   "authorList": ["Live_block"],
   "credits": "",
-  "logoFile": "",
+  "logoFile": "Icon.png",
   "requiredMods": ["mixinbooter"],
   "screenshots": [],
   "dependencies": []
